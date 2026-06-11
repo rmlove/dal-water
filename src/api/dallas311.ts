@@ -1,6 +1,6 @@
 import type { IncidentCategory, WaterIncident } from '../types'
 
-const BASE_URL = 'https://www.dallasopendata.com/resource/wwr9-8ha7.json'
+const BASE_URL = 'https://www.dallasopendata.com/resource/gc4d-8a49.json'
 
 // Keywords used to find water-related service requests within the
 // Dallas 311 "service_request_type" field.
@@ -94,6 +94,15 @@ function extractCoordinates(record: RawRecord): { lat?: number; lng?: number } {
     }
   }
 
+  // The Dallas 311 dataset exposes coordinates as a "(lat,lng)" string.
+  const latLocation = getString(record, ['lat_location'])
+  if (latLocation) {
+    const match = latLocation.match(/\(?\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)?/)
+    if (match) {
+      return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) }
+    }
+  }
+
   return {
     lat: getNumber(record, ['latitude', 'lat', 'latitude_x', 'y_coordinate']),
     lng: getNumber(record, ['longitude', 'long', 'lng', 'longitude_x', 'x_coordinate']),
@@ -109,7 +118,7 @@ function normalize(record: RawRecord): WaterIncident | null {
 
   const type = getString(record, ['service_request_type', 'sr_type', 'type']) ?? 'Unknown'
   const id =
-    getString(record, ['service_request_id', 'sr_number', 'case_number', 'objectid']) ??
+    getString(record, ['service_request_number', 'service_request_id', 'sr_number', 'case_number', 'objectid']) ??
     `${type}-${lat}-${lng}-${getString(record, ['created_date']) ?? Math.random()}`
 
   return {
