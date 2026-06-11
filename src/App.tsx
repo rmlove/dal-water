@@ -30,7 +30,9 @@ function App() {
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('googleMapsApiKey') ?? '')
+  const [apiKey, setApiKey] = useState(
+    () => localStorage.getItem('googleMapsApiKey') || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+  )
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number; label: string } | null>(
     null
   )

@@ -30,9 +30,15 @@ the full interactive map and address search:
 
 1. Get a key at https://developers.google.com/maps/documentation/javascript/get-api-key
    - Enable the **Maps JavaScript API** and **Geocoding API**
-2. Paste it into the "Google Maps API key" section in the app's sidebar
-
-The key is stored only in your browser's `localStorage`.
+   - Restrict the key (HTTP referrers + the two APIs above) so it can't be
+     abused if it leaks
+2. Provide the key one of two ways:
+   - **Local dev:** copy `.env.example` to `.env.local` and set
+     `VITE_GOOGLE_MAPS_API_KEY=your-key-here`. `.env.local` is gitignored and
+     will never be committed. Restart `npm run dev` after adding it.
+   - **In the browser:** paste it into the "Google Maps API key" section in
+     the app's sidebar. This is stored only in your browser's `localStorage`
+     and overrides the `.env.local` value.
 
 ## Scripts
 
