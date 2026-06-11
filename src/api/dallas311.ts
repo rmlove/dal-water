@@ -148,7 +148,19 @@ export async function fetchWaterIncidents({
 
   const response = await fetch(`${BASE_URL}?${params.toString()}`)
   if (!response.ok) {
-    throw new Error(`Dallas 311 API request failed: ${response.status} ${response.statusText}`)
+    const body = await response.text().catch(() => '')
+    let detail = body
+    try {
+      const parsed = JSON.parse(body) as { message?: string }
+      if (parsed.message) detail = parsed.message
+    } catch {
+      // body wasn't JSON; use it as-is
+    }
+    throw new Error(
+      `Dallas 311 API request failed: ${response.status} ${response.statusText}${
+        detail ? ` — ${detail}` : ''
+      }`
+    )
   }
 
   const data = (await response.json()) as RawRecord[]
