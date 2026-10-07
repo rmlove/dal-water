@@ -119,6 +119,38 @@
   color: #64748b;
 }
 
+.map-info-district {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.map-info-times {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.map-info-time-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.map-info-time-label {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.map-info-time-value {
+  color: #334155;
+  text-align: right;
+}
+
 /* ── Mock map ── */
 .mock-map {
   position: relative;

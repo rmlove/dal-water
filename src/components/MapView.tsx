@@ -17,24 +17,31 @@ interface MapViewProps {
 }
 
 function buildInfoContent(incident: WaterIncident): string {
-  const date = incident.createdDate ? incident.createdDate.split('T')[0] : '—'
-  const closed = incident.closedDate ? incident.closedDate.split('T')[0] : null
+  const createdRaw = incident.createdDate ?? ''
+  const date = createdRaw ? new Date(createdRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+  const time = createdRaw ? new Date(createdRaw).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
+  const closed = incident.closedDate ? new Date(incident.closedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
   const district = incident.councilDistrict ? `District ${incident.councilDistrict}` : null
   const outcome = incident.outcome && incident.outcome !== incident.status ? incident.outcome : null
   const color = CATEGORY_COLORS[incident.category]
-  const metaItems = [district, outcome].filter(Boolean).join(' · ')
+  const isClosed = incident.status.toLowerCase().includes('closed')
 
   return `
     <div class="map-info">
       <div class="map-info-type" style="border-left: 3px solid ${color}">${incident.type}</div>
       <div class="map-info-address">${incident.address}</div>
       <div class="map-info-row">
-        <span class="map-info-status map-info-status-${incident.status.toLowerCase().includes('closed') ? 'closed' : 'open'}">
-          ${incident.status}
-        </span>
-        <span class="map-info-date">Reported ${date}${closed ? ` · Closed ${closed}` : ''}</span>
+        <span class="map-info-status map-info-status-${isClosed ? 'closed' : 'open'}">${incident.status}</span>
+        ${district ? `<span class="map-info-district">${district}</span>` : ''}
       </div>
-      ${metaItems ? `<div class="map-info-meta">${metaItems}</div>` : ''}
+      <div class="map-info-times">
+        <div class="map-info-time-row">
+          <span class="map-info-time-label">Reported</span>
+          <span class="map-info-time-value">${date}${time ? ` at ${time}` : ''}</span>
+        </div>
+        ${closed ? `<div class="map-info-time-row"><span class="map-info-time-label">Closed</span><span class="map-info-time-value">${closed}</span></div>` : ''}
+        ${outcome ? `<div class="map-info-time-row"><span class="map-info-time-label">Outcome</span><span class="map-info-time-value">${outcome}</span></div>` : ''}
+      </div>
     </div>
   `
 }
@@ -173,7 +180,7 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
           title: incident.type,
         })
         // Use ref so the listener always calls the current onSelect without needing recreation
-        adv.addEventListener('gmp-click', () => {
+        adv.addListener('click', () => {
           onSelectRef.current(incident.id)
           if (infoWindow.current) {
             infoWindow.current.setContent(buildInfoContent(incident))
