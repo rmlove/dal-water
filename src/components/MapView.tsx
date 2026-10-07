@@ -105,9 +105,9 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
 
         infoWindow.current = new google.maps.InfoWindow()
 
-        // Pan to center immediately if one was already set when the map loaded
+        // Jump to center immediately if one was already set when the map loaded
         if (centerRef.current) {
-          mapInstance.current.panTo(centerRef.current)
+          mapInstance.current.setCenter(centerRef.current)
           mapInstance.current.setZoom(14)
         }
 
@@ -133,10 +133,10 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     }
   }, [apiKey])
 
-  // Pan whenever the center prop changes (user searches an address)
+  // Re-center whenever the user searches a new address
   useEffect(() => {
     if (!mapInstance.current || !center) return
-    mapInstance.current.panTo(center)
+    mapInstance.current.setCenter(center)
     mapInstance.current.setZoom(14)
   }, [center])
 
@@ -220,7 +220,7 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     } else {
       infoWindow.current.open({ map: mapInstance.current, anchor: marker as google.maps.Marker })
     }
-    mapInstance.current.panTo({ lat: incident.lat, lng: incident.lng })
+    mapInstance.current.setCenter({ lat: incident.lat, lng: incident.lng })
   }, [selectedId, ready, incidentById])
 
   if (!apiKey) {
