@@ -75,7 +75,7 @@ function App() {
     (Number(hash.radius) as RadiusMiles) || 3
   )
 
-  const [apiKey, setApiKey] = useState(
+  const [apiKey] = useState(
     () => localStorage.getItem('googleMapsApiKey') || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
   )
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number; label: string } | null>(
@@ -102,9 +102,11 @@ function App() {
     })
   }, [startDate, endDate, activeCategories, searchCenter, radiusMiles])
 
-  useEffect(() => {
-    localStorage.setItem('googleMapsApiKey', apiKey)
-  }, [apiKey])
+  const handleApiKeyChange = (newKey: string) => {
+    localStorage.setItem('googleMapsApiKey', newKey)
+    // Google Maps JS SDK only accepts one key per page load — reload to reinitialize
+    window.location.reload()
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -227,7 +229,7 @@ function App() {
             locating={locating}
             searchError={searchError}
             apiKey={apiKey}
-            onApiKeyChange={setApiKey}
+            onApiKeyChange={handleApiKeyChange}
             radiusMiles={radiusMiles}
             onRadiusChange={setRadiusMiles}
           />
