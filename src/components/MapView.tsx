@@ -6,6 +6,7 @@ import { ALL_CATEGORIES } from '../api/dallas311'
 import './MapView.css'
 
 const DALLAS_CENTER = { lat: 32.7767, lng: -96.797 }
+let mapsConfigured = false
 
 interface MapViewProps {
   apiKey: string
@@ -54,7 +55,10 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     if (!apiKey || !mapRef.current) return
     let cancelled = false
 
-    setOptions({ key: apiKey, v: 'weekly' })
+    if (!mapsConfigured) {
+      setOptions({ key: apiKey, v: 'weekly' })
+      mapsConfigured = true
+    }
 
     importLibrary('maps')
       .then(async () => {
@@ -130,10 +134,10 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
         marker = new google.maps.marker.AdvancedMarkerElement({
           map: mapInstance.current,
           position: { lat: incident.lat, lng: incident.lng },
-          content: pin.element,
+          content: pin,
           title: incident.type,
         })
-        marker.addListener('click', () => {
+        marker.addEventListener('gmp-click', () => {
           onSelect(incident.id)
           if (infoWindow.current) {
             infoWindow.current.setContent(buildInfoContent(incident))
