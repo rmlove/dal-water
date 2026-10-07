@@ -59,7 +59,7 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
         mapInstance.current = new google.maps.Map(mapRef.current, {
           center: DALLAS_CENTER,
           zoom: 11,
-          mapId: 'DAL_WATER_MAP',
+          mapId: 'DEMO_MAP_ID',
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,

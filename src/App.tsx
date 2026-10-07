@@ -145,7 +145,7 @@ function App() {
     setSearching(true)
     setSearchError(null)
     try {
-      const result = await geocodeAddress(address, apiKey)
+      const result = await geocodeAddress(address)
       setSearchCenter({ lat: result.lat, lng: result.lng, label: result.formattedAddress })
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : 'Search failed.')
