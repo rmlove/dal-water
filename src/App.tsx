@@ -138,10 +138,6 @@ function App() {
   const handleClearCategories = () => setActiveCategories(new Set())
 
   const handleSearchAddress = async (address: string) => {
-    if (!apiKey) {
-      setSearchError('Add a Google Maps API key to enable address search.')
-      return
-    }
     setSearching(true)
     setSearchError(null)
     try {

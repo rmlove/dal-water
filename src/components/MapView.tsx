@@ -56,12 +56,10 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
 
     setOptions({ key: apiKey, v: 'weekly' })
 
-    // Try loading with AdvancedMarkerElement (requires mapId); fall back to basic Maps if it fails
     importLibrary('maps')
       .then(async () => {
         if (cancelled || !mapRef.current) return
 
-        // Try with DEMO_MAP_ID first for AdvancedMarkerElement support
         try {
           await importLibrary('marker')
           mapInstance.current = new google.maps.Map(mapRef.current, {
@@ -74,7 +72,6 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
           })
           useAdvanced.current = true
         } catch {
-          // Fall back to classic map without mapId
           mapInstance.current = new google.maps.Map(mapRef.current!, {
             center: DALLAS_CENTER,
             zoom: 11,
@@ -84,6 +81,15 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
           })
           useAdvanced.current = false
         }
+
+        // Detect blank map: if tiles don't load in 8s, fall back to MockMap
+        const tileTimer = setTimeout(() => {
+          if (!cancelled) setLoadError('TILES_FAILED')
+        }, 8000)
+        mapInstance.current.addListener('tilesloaded', () => {
+          clearTimeout(tileTimer)
+          // tiles loaded successfully — map is rendering
+        })
 
         infoWindow.current = new google.maps.InfoWindow()
         if (!cancelled) setReady(true)
@@ -180,6 +186,11 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} />
   }
 
+  // Tiles failed to load (billing/API not enabled) — show mock map with a banner
+  if (loadError === 'TILES_FAILED') {
+    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} tilesFailed />
+  }
+
   if (loadError) {
     return <div className="map-error">{loadError}</div>
   }
@@ -205,7 +216,7 @@ function MapLegend() {
   )
 }
 
-function MockMap({ incidents, selectedId, onSelect }: Omit<MapViewProps, 'apiKey' | 'center'>) {
+function MockMap({ incidents, selectedId, onSelect, tilesFailed }: Omit<MapViewProps, 'apiKey' | 'center'> & { tilesFailed?: boolean }) {
   const bounds = { minLat: 32.6, maxLat: 33.0, minLng: -97.0, maxLng: -96.55 }
 
   const project = (lat: number, lng: number) => ({
@@ -213,11 +224,13 @@ function MockMap({ incidents, selectedId, onSelect }: Omit<MapViewProps, 'apiKey
     y: Math.min(Math.max((1 - (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * 100, 0), 100),
   })
 
+  const banner = tilesFailed
+    ? 'Map tiles blocked — enable Maps JavaScript API + billing in Google Cloud Console to see the live map.'
+    : 'Preview mode — add a Google Maps API key in the sidebar for an interactive map.'
+
   return (
     <div className="map-wrapper map-container mock-map">
-      <div className="mock-map-banner">
-        Preview mode — add a Google Maps API key in the sidebar for an interactive map.
-      </div>
+      <div className="mock-map-banner">{banner}</div>
       <div className="mock-map-grid">
         {incidents.map((incident) => {
           const { x, y } = project(incident.lat, incident.lng)
