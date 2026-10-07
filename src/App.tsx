@@ -254,6 +254,7 @@ function App() {
 
         <main className="map-pane">
           <MapView
+            key={apiKey}
             apiKey={apiKey}
             incidents={filteredIncidents}
             selectedId={selectedId}

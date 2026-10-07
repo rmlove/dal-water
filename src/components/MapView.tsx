@@ -6,7 +6,6 @@ import { ALL_CATEGORIES } from '../api/dallas311'
 import './MapView.css'
 
 const DALLAS_CENTER = { lat: 32.7767, lng: -96.797 }
-let mapsConfigured = false
 
 interface MapViewProps {
   apiKey: string
@@ -55,10 +54,7 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     if (!apiKey || !mapRef.current) return
     let cancelled = false
 
-    if (!mapsConfigured) {
-      setOptions({ key: apiKey, v: 'weekly' })
-      mapsConfigured = true
-    }
+    setOptions({ key: apiKey, v: 'weekly' })
 
     importLibrary('maps')
       .then(async () => {
