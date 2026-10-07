@@ -39,11 +39,14 @@ function buildInfoContent(incident: WaterIncident): string {
   `
 }
 
+type AnyMarker = google.maps.marker.AdvancedMarkerElement | google.maps.Marker
+
 export default function MapView({ apiKey, incidents, selectedId, onSelect, center }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<google.maps.Map | null>(null)
-  const markers = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map())
+  const markers = useRef<Map<string, AnyMarker>>(new Map())
   const infoWindow = useRef<google.maps.InfoWindow | null>(null)
+  const useAdvanced = useRef<boolean>(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
@@ -53,23 +56,41 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
 
     setOptions({ key: apiKey, v: 'weekly' })
 
-    Promise.all([importLibrary('maps'), importLibrary('marker')])
-      .then(() => {
+    // Try loading with AdvancedMarkerElement (requires mapId); fall back to basic Maps if it fails
+    importLibrary('maps')
+      .then(async () => {
         if (cancelled || !mapRef.current) return
-        mapInstance.current = new google.maps.Map(mapRef.current, {
-          center: DALLAS_CENTER,
-          zoom: 11,
-          mapId: 'DEMO_MAP_ID',
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
-        })
+
+        // Try with DEMO_MAP_ID first for AdvancedMarkerElement support
+        try {
+          await importLibrary('marker')
+          mapInstance.current = new google.maps.Map(mapRef.current, {
+            center: DALLAS_CENTER,
+            zoom: 11,
+            mapId: 'DEMO_MAP_ID',
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+          })
+          useAdvanced.current = true
+        } catch {
+          // Fall back to classic map without mapId
+          mapInstance.current = new google.maps.Map(mapRef.current!, {
+            center: DALLAS_CENTER,
+            zoom: 11,
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+          })
+          useAdvanced.current = false
+        }
+
         infoWindow.current = new google.maps.InfoWindow()
-        setReady(true)
+        if (!cancelled) setReady(true)
       })
       .catch((err: unknown) => {
-        console.error(err)
-        if (!cancelled) setLoadError('Failed to load Google Maps. Check your API key.')
+        console.error('Maps load error:', err)
+        if (!cancelled) setLoadError('Failed to load Google Maps. Check your API key and ensure Maps JavaScript API is enabled.')
       })
 
     return () => { cancelled = true }
@@ -84,31 +105,58 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
   useEffect(() => {
     if (!ready || !mapInstance.current) return
 
-    markers.current.forEach((marker) => { marker.map = null })
+    markers.current.forEach((marker) => {
+      if ('map' in marker) marker.map = null
+      else (marker as google.maps.Marker).setMap(null)
+    })
     markers.current.clear()
 
     incidents.forEach((incident) => {
-      const pin = new google.maps.marker.PinElement({
-        background: CATEGORY_COLORS[incident.category],
-        borderColor: 'rgba(0,0,0,0.3)',
-        glyphColor: '#ffffff',
-        scale: 0.9,
-      })
+      let marker: AnyMarker
 
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map: mapInstance.current,
-        position: { lat: incident.lat, lng: incident.lng },
-        content: pin.element,
-        title: incident.type,
-      })
-
-      marker.addListener('click', () => {
-        onSelect(incident.id)
-        if (infoWindow.current) {
-          infoWindow.current.setContent(buildInfoContent(incident))
-          infoWindow.current.open({ map: mapInstance.current!, anchor: marker })
-        }
-      })
+      if (useAdvanced.current) {
+        const pin = new google.maps.marker.PinElement({
+          background: CATEGORY_COLORS[incident.category],
+          borderColor: 'rgba(0,0,0,0.3)',
+          glyphColor: '#ffffff',
+          scale: 0.9,
+        })
+        marker = new google.maps.marker.AdvancedMarkerElement({
+          map: mapInstance.current,
+          position: { lat: incident.lat, lng: incident.lng },
+          content: pin.element,
+          title: incident.type,
+        })
+        marker.addListener('click', () => {
+          onSelect(incident.id)
+          if (infoWindow.current) {
+            infoWindow.current.setContent(buildInfoContent(incident))
+            infoWindow.current.open({ map: mapInstance.current!, anchor: marker as google.maps.marker.AdvancedMarkerElement })
+          }
+        })
+      } else {
+        const m = new google.maps.Marker({
+          map: mapInstance.current,
+          position: { lat: incident.lat, lng: incident.lng },
+          title: incident.type,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 7,
+            fillColor: CATEGORY_COLORS[incident.category],
+            fillOpacity: 1,
+            strokeColor: 'rgba(0,0,0,0.3)',
+            strokeWeight: 1.5,
+          },
+        })
+        m.addListener('click', () => {
+          onSelect(incident.id)
+          if (infoWindow.current) {
+            infoWindow.current.setContent(buildInfoContent(incident))
+            infoWindow.current.open({ map: mapInstance.current!, anchor: m })
+          }
+        })
+        marker = m
+      }
 
       markers.current.set(incident.id, marker)
     })
@@ -120,7 +168,11 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     const incident = incidents.find((i) => i.id === selectedId)
     if (!marker || !incident || !mapInstance.current || !infoWindow.current) return
     infoWindow.current.setContent(buildInfoContent(incident))
-    infoWindow.current.open({ map: mapInstance.current, anchor: marker })
+    if (useAdvanced.current) {
+      infoWindow.current.open({ map: mapInstance.current, anchor: marker as google.maps.marker.AdvancedMarkerElement })
+    } else {
+      infoWindow.current.open({ map: mapInstance.current, anchor: marker as google.maps.Marker })
+    }
     mapInstance.current.panTo({ lat: incident.lat, lng: incident.lng })
   }, [selectedId, ready, incidents])
 
