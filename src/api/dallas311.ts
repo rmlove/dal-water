@@ -1,31 +1,34 @@
 import type { IncidentCategory, WaterIncident } from '../types'
 
-const BASE_URL = 'https://www.dallasopendata.com/resource/gc4d-8a49.json'
+// 311 Service Requests — October 1, 2020 to Present (daily updates)
+const BASE_URL = 'https://www.dallasopendata.com/resource/d7e7-envw.json'
 
-// Keywords used to find water-related service requests within the
-// Dallas 311 "service_request_type" field.
+// Exact service_request_type values from the Dallas 311 dataset that are
+// water-related (department = "Dallas Water Utilities" or "Office of Env Quality").
 const WATER_KEYWORDS = [
-  'Water Leak',
   'Water Main',
-  'Water Waste',
-  'Water Pressure',
-  'Water Quality',
-  'Water Meter',
-  'Water Service',
-  'Hydrant',
-  'Drainage',
-  'Storm Water',
-  'Stormwater',
   'Sewer',
+  'Sewage',
+  'Storm Drain',
+  'Storm Sewer',
+  'Stormwater',
+  'Flooding',
+  'Flooded',
+  'Creek',
+  'Water Pollution',
+  'Chemical Spill',
+  'Swimming Pool Discharge',
+  'Floodplain',
+  'Water/Sanitary',
+  'Water/Wastewater',
 ]
 
 const CATEGORY_RULES: { category: IncidentCategory; match: RegExp }[] = [
-  { category: 'Water Main Break', match: /main\s*break|water\s*main/i },
-  { category: 'Water Leak', match: /leak/i },
-  { category: 'Water Waste', match: /waste/i },
-  { category: 'Water Pressure', match: /pressure/i },
-  { category: 'Water Quality', match: /quality|discolor|taste|odor/i },
-  { category: 'Drainage / Storm Water', match: /drain|storm\s*water|stormwater|sewer/i },
+  { category: 'Water Main Break', match: /water\s*main\s*leak|water\s*main\s*break/i },
+  { category: 'Sewer Problem', match: /sewer\s*problem|sewage/i },
+  { category: 'Water Pollution', match: /water\s*pollution|chemical\s*spill|swimming\s*pool\s*discharge/i },
+  { category: 'Drainage / Storm Water', match: /storm\s*drain|storm\s*sewer|stormwater|flood|creek|culvert|inlet/i },
+  { category: 'Water / Sewer Construction', match: /construction|line\s*locate/i },
 ]
 
 export function categorize(type: string): IncidentCategory {
@@ -36,12 +39,11 @@ export function categorize(type: string): IncidentCategory {
 }
 
 export const ALL_CATEGORIES: IncidentCategory[] = [
-  'Water Leak',
   'Water Main Break',
-  'Water Waste',
-  'Water Pressure',
-  'Water Quality',
+  'Sewer Problem',
+  'Water Pollution',
   'Drainage / Storm Water',
+  'Water / Sewer Construction',
   'Other Water',
 ]
 

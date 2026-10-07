@@ -1,10 +1,9 @@
 export type IncidentCategory =
-  | 'Water Leak'
   | 'Water Main Break'
-  | 'Water Waste'
-  | 'Water Pressure'
-  | 'Water Quality'
+  | 'Sewer Problem'
+  | 'Water Pollution'
   | 'Drainage / Storm Water'
+  | 'Water / Sewer Construction'
   | 'Other Water'
 
 export interface WaterIncident {
