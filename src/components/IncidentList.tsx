@@ -87,7 +87,12 @@ export default function IncidentList({ incidents, selectedId, onSelect, loading,
               <div className="incident-address">{incident.address}</div>
               <div className="incident-meta">
                 <span className={`status-badge ${statusClass(incident.status)}`}>{incident.status}</span>
-                <span className="incident-date">{relativeDate(incident.createdDate)}</span>
+                <span className="incident-date">
+                  {incident.councilDistrict && (
+                    <span className="district-tag">D{incident.councilDistrict}</span>
+                  )}
+                  {relativeDate(incident.createdDate)}
+                </span>
               </div>
             </div>
           </li>

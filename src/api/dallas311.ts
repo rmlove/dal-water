@@ -134,6 +134,8 @@ function normalize(record: RawRecord): WaterIncident | null {
       'Address unavailable',
     createdDate: getString(record, ['created_date', 'date_created']) ?? '',
     closedDate: getString(record, ['closed_date', 'date_closed']),
+    councilDistrict: getString(record, ['city_council_district', 'council_district']),
+    outcome: getString(record, ['outcome']),
     lat,
     lng,
   }

@@ -14,6 +14,8 @@ export interface WaterIncident {
   address: string
   createdDate: string
   closedDate?: string
+  councilDistrict?: string
+  outcome?: string
   lat: number
   lng: number
 }

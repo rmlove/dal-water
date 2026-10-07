@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
 import type { WaterIncident } from '../types'
 import { CATEGORY_COLORS } from '../categoryColors'
+import { ALL_CATEGORIES } from '../api/dallas311'
 import './MapView.css'
 
 const DALLAS_CENTER = { lat: 32.7767, lng: -96.797 }
@@ -14,6 +15,30 @@ interface MapViewProps {
   center: { lat: number; lng: number } | null
 }
 
+function buildInfoContent(incident: WaterIncident): string {
+  const date = incident.createdDate ? incident.createdDate.split('T')[0] : '—'
+  const closed = incident.closedDate ? incident.closedDate.split('T')[0] : null
+  const district = incident.councilDistrict ? `District ${incident.councilDistrict}` : null
+  const outcome = incident.outcome && incident.outcome !== incident.status ? incident.outcome : null
+
+  const color = CATEGORY_COLORS[incident.category]
+  const metaItems = [district, outcome].filter(Boolean).join(' · ')
+
+  return `
+    <div class="map-info">
+      <div class="map-info-type" style="border-left: 3px solid ${color}">${incident.type}</div>
+      <div class="map-info-address">${incident.address}</div>
+      <div class="map-info-row">
+        <span class="map-info-status map-info-status-${incident.status.toLowerCase().includes('closed') ? 'closed' : 'open'}">
+          ${incident.status}
+        </span>
+        <span class="map-info-date">Reported ${date}${closed ? ` · Closed ${closed}` : ''}</span>
+      </div>
+      ${metaItems ? `<div class="map-info-meta">${metaItems}</div>` : ''}
+    </div>
+  `
+}
+
 export default function MapView({ apiKey, incidents, selectedId, onSelect, center }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<google.maps.Map | null>(null)
@@ -22,7 +47,6 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
   const [loadError, setLoadError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
-  // Initialize the map once we have an API key.
   useEffect(() => {
     if (!apiKey || !mapRef.current) return
     let cancelled = false
@@ -36,6 +60,9 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
           center: DALLAS_CENTER,
           zoom: 11,
           mapId: 'DAL_WATER_MAP',
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
         })
         infoWindow.current = new google.maps.InfoWindow()
         setReady(true)
@@ -45,33 +72,27 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
         if (!cancelled) setLoadError('Failed to load Google Maps. Check your API key.')
       })
 
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [apiKey])
 
-  // Pan to a searched address.
   useEffect(() => {
     if (!mapInstance.current || !center) return
     mapInstance.current.panTo(center)
     mapInstance.current.setZoom(14)
   }, [center])
 
-  // Render markers whenever incidents change.
   useEffect(() => {
     if (!ready || !mapInstance.current) return
 
-    // Clear old markers.
-    markers.current.forEach((marker) => {
-      marker.map = null
-    })
+    markers.current.forEach((marker) => { marker.map = null })
     markers.current.clear()
 
     incidents.forEach((incident) => {
       const pin = new google.maps.marker.PinElement({
         background: CATEGORY_COLORS[incident.category],
-        borderColor: '#1f2937',
+        borderColor: 'rgba(0,0,0,0.3)',
         glyphColor: '#ffffff',
+        scale: 0.9,
       })
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
@@ -84,10 +105,7 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
       marker.addListener('click', () => {
         onSelect(incident.id)
         if (infoWindow.current) {
-          infoWindow.current.setContent(
-            `<div class="map-info"><strong>${incident.type}</strong><br/>${incident.address}<br/>` +
-              `Status: ${incident.status}<br/>Reported: ${incident.createdDate.split('T')[0]}</div>`
-          )
+          infoWindow.current.setContent(buildInfoContent(incident))
           infoWindow.current.open({ map: mapInstance.current!, anchor: marker })
         }
       })
@@ -96,16 +114,12 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     })
   }, [incidents, ready, onSelect])
 
-  // Highlight the selected marker by opening its info window.
   useEffect(() => {
     if (!ready || !selectedId) return
     const marker = markers.current.get(selectedId)
     const incident = incidents.find((i) => i.id === selectedId)
     if (!marker || !incident || !mapInstance.current || !infoWindow.current) return
-    infoWindow.current.setContent(
-      `<div class="map-info"><strong>${incident.type}</strong><br/>${incident.address}<br/>` +
-        `Status: ${incident.status}<br/>Reported: ${incident.createdDate.split('T')[0]}</div>`
-    )
+    infoWindow.current.setContent(buildInfoContent(incident))
     infoWindow.current.open({ map: mapInstance.current, anchor: marker })
     mapInstance.current.panTo({ lat: incident.lat, lng: incident.lng })
   }, [selectedId, ready, incidents])
@@ -118,29 +132,39 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     return <div className="map-error">{loadError}</div>
   }
 
-  return <div ref={mapRef} className="map-container" />
+  return (
+    <div className="map-wrapper">
+      <div ref={mapRef} className="map-container" />
+      <MapLegend />
+    </div>
+  )
 }
 
-// A lightweight, dependency-free placeholder map used until a Google Maps
-// API key is supplied. Plots incidents on a simple lat/lng grid over Dallas.
-function MockMap({ incidents, selectedId, onSelect }: Omit<MapViewProps, 'apiKey' | 'center'>) {
-  const bounds = {
-    minLat: 32.6,
-    maxLat: 33.0,
-    minLng: -97.0,
-    maxLng: -96.55,
-  }
+function MapLegend() {
+  return (
+    <div className="map-legend">
+      {ALL_CATEGORIES.map((cat) => (
+        <div key={cat} className="legend-item">
+          <span className="legend-dot" style={{ background: CATEGORY_COLORS[cat] }} />
+          <span>{cat}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
-  const project = (lat: number, lng: number) => {
-    const x = ((lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 100
-    const y = (1 - (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * 100
-    return { x: Math.min(Math.max(x, 0), 100), y: Math.min(Math.max(y, 0), 100) }
-  }
+function MockMap({ incidents, selectedId, onSelect }: Omit<MapViewProps, 'apiKey' | 'center'>) {
+  const bounds = { minLat: 32.6, maxLat: 33.0, minLng: -97.0, maxLng: -96.55 }
+
+  const project = (lat: number, lng: number) => ({
+    x: Math.min(Math.max(((lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 100, 0), 100),
+    y: Math.min(Math.max((1 - (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * 100, 0), 100),
+  })
 
   return (
-    <div className="map-container mock-map">
+    <div className="map-wrapper map-container mock-map">
       <div className="mock-map-banner">
-        Map preview mode — add a Google Maps API key for a real interactive map.
+        Preview mode — add a Google Maps API key in the sidebar for an interactive map.
       </div>
       <div className="mock-map-grid">
         {incidents.map((incident) => {
@@ -149,17 +173,14 @@ function MockMap({ incidents, selectedId, onSelect }: Omit<MapViewProps, 'apiKey
             <button
               key={incident.id}
               className={`mock-pin${selectedId === incident.id ? ' selected' : ''}`}
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                background: CATEGORY_COLORS[incident.category],
-              }}
-              title={`${incident.type} - ${incident.address}`}
+              style={{ left: `${x}%`, top: `${y}%`, background: CATEGORY_COLORS[incident.category] }}
+              title={`${incident.type} — ${incident.address}`}
               onClick={() => onSelect(incident.id)}
             />
           )
         })}
       </div>
+      <MapLegend />
     </div>
   )
 }
