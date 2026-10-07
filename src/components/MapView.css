@@ -169,3 +169,16 @@
   outline-offset: 1px;
   z-index: 4;
 }
+
+.mock-center-pin {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px #2563eb, 0 2px 6px rgba(0,0,0,0.3);
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+}

@@ -225,42 +225,44 @@ function App() {
 
       <div className="app-layout">
         <aside className="sidebar">
-          <FilterBar
-            startDate={startDate}
-            endDate={endDate}
-            onDateChange={handleDateChange}
-            activeCategories={activeCategories}
-            onToggleCategory={handleToggleCategory}
-            onSelectAll={handleSelectAllCategories}
-            onClearAll={handleClearCategories}
-            onSearchAddress={handleSearchAddress}
-            onNearMe={handleNearMe}
-            searching={searching}
-            locating={locating}
-            searchError={searchError}
-            apiKey={apiKey}
-            onApiKeyChange={handleApiKeyChange}
-            radiusMiles={radiusMiles}
-            onRadiusChange={setRadiusMiles}
-          />
-          {searchCenter && (
-            <div className="search-result">
-              <div className="search-result-text">
-                <span className="search-result-icon">📍</span>
-                <span>
-                  <strong>{radiusMiles} mi</strong> from{' '}
-                  <strong>{searchCenter.label}</strong>
-                </span>
+          <div className="sidebar-filters">
+            <FilterBar
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={handleDateChange}
+              activeCategories={activeCategories}
+              onToggleCategory={handleToggleCategory}
+              onSelectAll={handleSelectAllCategories}
+              onClearAll={handleClearCategories}
+              onSearchAddress={handleSearchAddress}
+              onNearMe={handleNearMe}
+              searching={searching}
+              locating={locating}
+              searchError={searchError}
+              apiKey={apiKey}
+              onApiKeyChange={handleApiKeyChange}
+              radiusMiles={radiusMiles}
+              onRadiusChange={setRadiusMiles}
+            />
+            {searchCenter && (
+              <div className="search-result">
+                <div className="search-result-text">
+                  <span className="search-result-icon">📍</span>
+                  <span>
+                    <strong>{radiusMiles} mi</strong> from{' '}
+                    <strong>{searchCenter.label}</strong>
+                  </span>
+                </div>
+                <button
+                  className="clear-btn"
+                  onClick={handleClearSearch}
+                  aria-label="Clear location filter"
+                >
+                  ✕ Clear
+                </button>
               </div>
-              <button
-                className="clear-btn"
-                onClick={handleClearSearch}
-                aria-label="Clear location filter"
-              >
-                ✕ Clear
-              </button>
-            </div>
-          )}
+            )}
+          </div>
           <IncidentList
             incidents={filteredIncidents}
             selectedId={selectedId}

@@ -89,11 +89,22 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;  /* sidebar itself doesn't scroll — only the incident list ul does */
   background: #f1f5f9;
   border-right: 1px solid #e2e8f0;
   padding: 0.65rem;
   gap: 0.55rem;
+}
+
+/* Filters + search result stay fixed at top; only the list scrolls */
+.sidebar-filters {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  overflow-y: auto;
+  /* Allow filters to scroll on small screens where they overflow */
+  max-height: 55%;
 }
 
 .map-pane {

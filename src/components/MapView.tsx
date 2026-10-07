@@ -7,14 +7,6 @@ import './MapView.css'
 
 const DALLAS_CENTER = { lat: 32.7767, lng: -96.797 }
 
-// Hoisted so MockMap never recreates these per render
-const MOCK_BOUNDS = { minLat: 32.6, maxLat: 33.0, minLng: -97.0, maxLng: -96.55 }
-function projectToPercent(lat: number, lng: number) {
-  return {
-    x: Math.min(Math.max(((lng - MOCK_BOUNDS.minLng) / (MOCK_BOUNDS.maxLng - MOCK_BOUNDS.minLng)) * 100, 0), 100),
-    y: Math.min(Math.max((1 - (lat - MOCK_BOUNDS.minLat) / (MOCK_BOUNDS.maxLat - MOCK_BOUNDS.minLat)) * 100, 0), 100),
-  }
-}
 
 interface MapViewProps {
   apiKey: string
@@ -134,7 +126,7 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     if (!mapInstance.current || !center) return
     mapInstance.current.panTo(center)
     mapInstance.current.setZoom(14)
-  }, [center])
+  }, [center, ready])  // also fire when map becomes ready with a pre-existing center
 
   useEffect(() => {
     if (!ready || !mapInstance.current) return
@@ -220,11 +212,11 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
   }, [selectedId, ready, incidentById])
 
   if (!apiKey) {
-    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} />
+    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} center={center} />
   }
 
   if (loadError === 'TILES_FAILED') {
-    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} tilesFailed />
+    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} center={center} tilesFailed />
   }
 
   if (loadError) {
@@ -252,17 +244,28 @@ function MapLegend() {
   )
 }
 
-function MockMap({ incidents, selectedId, onSelect, tilesFailed }: Omit<MapViewProps, 'apiKey' | 'center'> & { tilesFailed?: boolean }) {
+function MockMap({ incidents, selectedId, onSelect, tilesFailed, center }: Omit<MapViewProps, 'apiKey'> & { tilesFailed?: boolean }) {
   const banner = tilesFailed
     ? 'Map tiles blocked — enable Maps JavaScript API + billing in Google Cloud Console to see the live map.'
     : 'Preview mode — add a Google Maps API key in the sidebar for an interactive map.'
+
+  // Shift the coordinate origin when a search center is active so pins re-center around it
+  const origin = center ?? { lat: 32.7767, lng: -96.797 }
+  const span = { lat: 0.4, lng: 0.45 }
+
+  function project(lat: number, lng: number) {
+    return {
+      x: Math.min(Math.max(((lng - (origin.lng - span.lng / 2)) / span.lng) * 100, 0), 100),
+      y: Math.min(Math.max((1 - (lat - (origin.lat - span.lat / 2)) / span.lat) * 100, 0), 100),
+    }
+  }
 
   return (
     <div className="map-wrapper map-container mock-map">
       <div className="mock-map-banner">{banner}</div>
       <div className="mock-map-grid">
         {incidents.map((incident) => {
-          const { x, y } = projectToPercent(incident.lat, incident.lng)
+          const { x, y } = project(incident.lat, incident.lng)
           return (
             <button
               key={incident.id}
@@ -275,6 +278,13 @@ function MockMap({ incidents, selectedId, onSelect, tilesFailed }: Omit<MapViewP
             />
           )
         })}
+        {center && (
+          <div
+            className="mock-center-pin"
+            style={{ left: '50%', top: '50%' }}
+            aria-label="Search location"
+          />
+        )}
       </div>
       <MapLegend />
     </div>
