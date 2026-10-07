@@ -60,8 +60,11 @@ function buildWhereClause(startDate: string, endDate: string): string {
     (kw) => `upper(service_request_type) like upper('%${kw.replace(/'/g, "''")}%')`
   ).join(' OR ')
 
-  const start = toIso(new Date(`${startDate}T00:00:00`))
-  const end = toIso(new Date(`${endDate}T23:59:59`))
+  // Use explicit UTC to avoid locale-dependent date shifting
+  const [sy, sm, sd] = startDate.split('-').map(Number)
+  const [ey, em, ed] = endDate.split('-').map(Number)
+  const start = toIso(new Date(Date.UTC(sy, sm - 1, sd, 0, 0, 0)))
+  const end = toIso(new Date(Date.UTC(ey, em - 1, ed, 23, 59, 59)))
 
   return `(${typeClauses}) AND created_date between '${start}' AND '${end}'`
 }

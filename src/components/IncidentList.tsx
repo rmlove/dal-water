@@ -8,6 +8,7 @@ interface IncidentListProps {
   onSelect: (id: string) => void
   loading: boolean
   error: string | null
+  openCount: number
 }
 
 function statusClass(status: string): string {
@@ -17,10 +18,11 @@ function statusClass(status: string): string {
   return 'status-other'
 }
 
-function relativeDate(dateStr: string): string {
+// Compute once per call; now = passed in to avoid N Date.now() calls in list render
+function relativeDate(dateStr: string, now: number): string {
   const date = new Date(dateStr)
   if (isNaN(date.getTime())) return dateStr
-  const days = Math.floor((Date.now() - date.getTime()) / (24 * 60 * 60 * 1000))
+  const days = Math.floor((now - date.getTime()) / (24 * 60 * 60 * 1000))
   if (days === 0) return 'Today'
   if (days === 1) return 'Yesterday'
   if (days < 30) return `${days}d ago`
@@ -28,7 +30,7 @@ function relativeDate(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
 }
 
-export default function IncidentList({ incidents, selectedId, onSelect, loading, error }: IncidentListProps) {
+export default function IncidentList({ incidents, selectedId, onSelect, loading, error, openCount }: IncidentListProps) {
   if (loading) {
     return (
       <div className="incident-list skeleton-list">
@@ -64,7 +66,7 @@ export default function IncidentList({ incidents, selectedId, onSelect, loading,
     )
   }
 
-  const openCount = incidents.filter((i) => !i.status.toLowerCase().includes('closed')).length
+  const now = Date.now()
 
   return (
     <div className="incident-list">
@@ -74,14 +76,18 @@ export default function IncidentList({ incidents, selectedId, onSelect, loading,
           <span className="open-badge">{openCount} open</span>
         )}
       </div>
-      <ul>
+      <ul role="listbox" aria-label="Incident list">
         {incidents.map((incident) => (
           <li
             key={incident.id}
             className={`incident-item${selectedId === incident.id ? ' selected' : ''}`}
             onClick={() => onSelect(incident.id)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(incident.id) } }}
+            role="option"
+            aria-selected={selectedId === incident.id}
+            tabIndex={0}
           >
-            <span className="category-dot" style={{ background: CATEGORY_COLORS[incident.category] }} />
+            <span className="category-dot" style={{ background: CATEGORY_COLORS[incident.category] }} aria-hidden="true" />
             <div className="incident-details">
               <div className="incident-type">{incident.type}</div>
               <div className="incident-address">{incident.address}</div>
@@ -91,7 +97,7 @@ export default function IncidentList({ incidents, selectedId, onSelect, loading,
                   {incident.councilDistrict && (
                     <span className="district-tag">D{incident.councilDistrict}</span>
                   )}
-                  {relativeDate(incident.createdDate)}
+                  {relativeDate(incident.createdDate, now)}
                 </span>
               </div>
             </div>

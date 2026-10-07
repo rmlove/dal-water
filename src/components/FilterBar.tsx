@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { IncidentCategory } from '../types'
 import type { RadiusMiles } from '../App'
 import { ALL_CATEGORIES } from '../api/dallas311'
@@ -24,6 +24,8 @@ const DATE_PRESETS = [
   { label: '30 days', days: 30 },
   { label: '90 days', days: 90 },
 ]
+
+const RADIUS_OPTIONS: RadiusMiles[] = [1, 3, 5]
 
 interface FilterBarProps {
   startDate: string
@@ -63,29 +65,44 @@ export default function FilterBar({
   onRadiusChange,
 }: FilterBarProps) {
   const [addressInput, setAddressInput] = useState('')
+  // Local draft for API key — only commit on blur or Enter to avoid reloading on every keystroke
+  const [keyDraft, setKeyDraft] = useState(apiKey)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (addressInput.trim()) onSearchAddress(addressInput.trim())
   }
 
-  const activePreset = DATE_PRESETS.find(
-    (p) => daysAgo(p.days) === startDate && endDate === today()
-  )
+  const commitKey = () => {
+    const trimmed = keyDraft.trim()
+    if (trimmed !== apiKey) onApiKeyChange(trimmed)
+  }
+
+  // Memoize so Date.now() isn't called on every render for every preset
+  const activePresetDays = useMemo(() => {
+    const todayStr = today()
+    return DATE_PRESETS.find((p) => daysAgo(p.days) === startDate && endDate === todayStr)?.days
+  }, [startDate, endDate])
 
   return (
     <div className="filter-bar">
       {/* Search */}
       <section className="filter-section">
-        <div className="section-label">Find near an address</div>
+        <label className="section-label" htmlFor="address-search">Find near an address</label>
         <form className="address-search" onSubmit={handleSubmit}>
           <input
+            id="address-search"
             type="text"
             placeholder="Address or zip code…"
             value={addressInput}
             onChange={(e) => setAddressInput(e.target.value)}
+            aria-label="Street address or zip code"
           />
-          <button type="submit" disabled={searching || locating} aria-label="Search">
+          <button
+            type="submit"
+            disabled={searching || locating}
+            aria-label="Search address"
+          >
             {searching ? '…' : '↵'}
           </button>
         </form>
@@ -95,24 +112,27 @@ export default function FilterBar({
             className="near-me-btn"
             onClick={onNearMe}
             disabled={locating || searching}
+            aria-label="Use my current location"
           >
             {locating ? 'Locating…' : '📍 Near me'}
           </button>
           <div className="radius-group">
-            <span className="radius-label">Radius</span>
-            {([1, 3, 5] as RadiusMiles[]).map((r) => (
+            <span className="radius-label" id="radius-label">Radius</span>
+            {RADIUS_OPTIONS.map((r) => (
               <button
                 key={r}
                 type="button"
                 className={`radius-btn${radiusMiles === r ? ' active' : ''}`}
                 onClick={() => onRadiusChange(r)}
+                aria-pressed={radiusMiles === r}
+                aria-label={`${r} mile radius`}
               >
                 {r} mi
               </button>
             ))}
           </div>
         </div>
-        {searchError && <div className="search-error">{searchError}</div>}
+        {searchError && <div className="search-error" role="alert">{searchError}</div>}
       </section>
 
       {/* Date range */}
@@ -123,8 +143,9 @@ export default function FilterBar({
             <button
               key={p.label}
               type="button"
-              className={`preset-btn${activePreset?.days === p.days ? ' active' : ''}`}
+              className={`preset-btn${activePresetDays === p.days ? ' active' : ''}`}
               onClick={() => onDateChange(daysAgo(p.days), today())}
+              aria-pressed={activePresetDays === p.days}
             >
               {p.label}
             </button>
@@ -138,6 +159,7 @@ export default function FilterBar({
               value={startDate}
               max={endDate}
               onChange={(e) => onDateChange(e.target.value, endDate)}
+              aria-label="Start date"
             />
           </label>
           <label>
@@ -147,6 +169,7 @@ export default function FilterBar({
               value={endDate}
               min={startDate}
               onChange={(e) => onDateChange(startDate, e.target.value)}
+              aria-label="End date"
             />
           </label>
         </div>
@@ -161,7 +184,7 @@ export default function FilterBar({
             <button type="button" onClick={onClearAll}>None</button>
           </span>
         </div>
-        <div className="category-chips">
+        <div className="category-chips" role="group" aria-label="Filter by issue type">
           {ALL_CATEGORIES.map((category) => {
             const active = activeCategories.has(category)
             return (
@@ -171,6 +194,7 @@ export default function FilterBar({
                 style={active ? { background: CATEGORY_COLORS[category], borderColor: CATEGORY_COLORS[category] } : undefined}
                 onClick={() => onToggleCategory(category)}
                 type="button"
+                aria-pressed={active}
               >
                 {category}
               </button>
@@ -179,15 +203,18 @@ export default function FilterBar({
         </div>
       </section>
 
-      {/* API key (collapsed by default when set) */}
+      {/* API key — local draft so reloads only happen on commit */}
       <details className="api-key-section" open={!apiKey}>
         <summary>Google Maps API key {apiKey ? '✓' : '⚠ not set'}</summary>
         <input
           type="password"
           placeholder="Paste your API key"
-          value={apiKey}
-          onChange={(e) => onApiKeyChange(e.target.value)}
+          value={keyDraft}
+          onChange={(e) => setKeyDraft(e.target.value)}
+          onBlur={commitKey}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitKey() } }}
           autoComplete="off"
+          aria-label="Google Maps API key"
         />
         <p className="hint">
           Stored only in your browser. Enables the interactive map and address search.{' '}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import FilterBar from './components/FilterBar'
 import MapView from './components/MapView'
 import IncidentList from './components/IncidentList'
@@ -23,8 +23,8 @@ function today(): string {
 }
 
 export type RadiusMiles = 1 | 3 | 5
+const VALID_RADII: RadiusMiles[] = [1, 3, 5]
 
-// Encode/decode filter state in the URL hash so users can share links.
 interface HashState {
   start?: string
   end?: string
@@ -35,6 +35,7 @@ interface HashState {
   radius?: string
 }
 
+// Read hash once at module level — it never changes on initial load
 function readHash(): HashState {
   try {
     const raw = window.location.hash.slice(1)
@@ -54,40 +55,41 @@ function writeHash(state: HashState) {
   history.replaceState(null, '', str ? `#${str}` : window.location.pathname)
 }
 
-function App() {
-  const hash = readHash()
+const INITIAL_HASH = readHash()
 
-  const [startDate, setStartDate] = useState(hash.start ?? daysAgo(30))
-  const [endDate, setEndDate] = useState(hash.end ?? today())
+function App() {
+  const [startDate, setStartDate] = useState(INITIAL_HASH.start ?? daysAgo(30))
+  const [endDate, setEndDate] = useState(INITIAL_HASH.end ?? today())
   const [incidents, setIncidents] = useState<WaterIncident[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeCategories, setActiveCategories] = useState<Set<IncidentCategory>>(() => {
-    if (hash.cats) {
-      const saved = new Set(hash.cats.split(',') as IncidentCategory[])
+    if (INITIAL_HASH.cats) {
+      const saved = new Set(INITIAL_HASH.cats.split(',') as IncidentCategory[])
       const valid = ALL_CATEGORIES.filter((c) => saved.has(c))
       if (valid.length > 0) return new Set(valid)
     }
     return new Set(ALL_CATEGORIES)
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [radiusMiles, setRadiusMiles] = useState<RadiusMiles>(
-    (Number(hash.radius) as RadiusMiles) || 3
-  )
+  const [radiusMiles, setRadiusMiles] = useState<RadiusMiles>(() => {
+    const r = Number(INITIAL_HASH.radius)
+    return VALID_RADII.includes(r as RadiusMiles) ? (r as RadiusMiles) : 3
+  })
 
   const [apiKey] = useState(
     () => localStorage.getItem('googleMapsApiKey') || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
   )
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number; label: string } | null>(
-    hash.lat && hash.lng
-      ? { lat: Number(hash.lat), lng: Number(hash.lng), label: decodeURIComponent(hash.label ?? '') }
+    INITIAL_HASH.lat && INITIAL_HASH.lng
+      ? { lat: Number(INITIAL_HASH.lat), lng: Number(INITIAL_HASH.lng), label: decodeURIComponent(INITIAL_HASH.label ?? '') }
       : null
   )
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [locating, setLocating] = useState(false)
 
-  // Keep URL hash in sync with filter state.
+  // Keep URL hash in sync; skip initial write
   const syncHash = useRef(false)
   useEffect(() => {
     if (!syncHash.current) { syncHash.current = true; return }
@@ -104,42 +106,56 @@ function App() {
 
   const handleApiKeyChange = (newKey: string) => {
     localStorage.setItem('googleMapsApiKey', newKey)
-    // Google Maps JS SDK only accepts one key per page load — reload to reinitialize
+    // Maps JS SDK only accepts one key per page load — reload to reinitialize cleanly
     window.location.reload()
   }
 
+  // Debounce date-driven fetches so rapid date input doesn't fire N requests
+  const fetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    let cancelled = false
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/dep change
-    setLoading(true)
-    setError(null)
+    if (fetchTimer.current) clearTimeout(fetchTimer.current)
+    fetchTimer.current = setTimeout(() => {
+      let cancelled = false
+      setLoading(true)
+      setError(null)
 
-    fetchWaterIncidents({ startDate, endDate })
-      .then((data) => { if (!cancelled) setIncidents(data) })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load incidents.') })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      fetchWaterIncidents({ startDate, endDate })
+        .then((data) => {
+          if (!cancelled) {
+            setIncidents(data)
+            if (data.length >= 2000) {
+              console.warn('Hit 2000 record limit — some incidents may be missing. Try a narrower date range.')
+            }
+          }
+        })
+        .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load incidents.') })
+        .finally(() => { if (!cancelled) setLoading(false) })
 
-    return () => { cancelled = true }
+      return () => { cancelled = true }
+    }, 400)
+
+    return () => { if (fetchTimer.current) clearTimeout(fetchTimer.current) }
   }, [startDate, endDate])
 
-  const handleDateChange = (newStart: string, newEnd: string) => {
+  const handleDateChange = useCallback((newStart: string, newEnd: string) => {
     setStartDate(newStart)
     setEndDate(newEnd)
-  }
+  }, [])
 
-  const handleToggleCategory = (category: IncidentCategory) => {
+  const handleToggleCategory = useCallback((category: IncidentCategory) => {
     setActiveCategories((prev) => {
       const next = new Set(prev)
       if (next.has(category)) next.delete(category)
       else next.add(category)
       return next
     })
-  }
+  }, [])
 
-  const handleSelectAllCategories = () => setActiveCategories(new Set(ALL_CATEGORIES))
-  const handleClearCategories = () => setActiveCategories(new Set())
+  const handleSelectAllCategories = useCallback(() => setActiveCategories(new Set(ALL_CATEGORIES)), [])
+  const handleClearCategories = useCallback(() => setActiveCategories(new Set()), [])
+  const handleClearSearch = useCallback(() => setSearchCenter(null), [])
 
-  const handleSearchAddress = async (address: string) => {
+  const handleSearchAddress = useCallback(async (address: string) => {
     setSearching(true)
     setSearchError(null)
     try {
@@ -150,9 +166,9 @@ function App() {
     } finally {
       setSearching(false)
     }
-  }
+  }, [])
 
-  const handleNearMe = () => {
+  const handleNearMe = useCallback(() => {
     if (!navigator.geolocation) {
       setSearchError('Your browser does not support geolocation.')
       return
@@ -161,11 +177,7 @@ function App() {
     setSearchError(null)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setSearchCenter({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          label: 'My location',
-        })
+        setSearchCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude, label: 'My location' })
         setLocating(false)
       },
       () => {
@@ -174,14 +186,12 @@ function App() {
       },
       { timeout: 10000 }
     )
-  }
+  }, [])
 
   const filteredIncidents = useMemo(() => {
     return incidents.filter((incident) => {
       if (!activeCategories.has(incident.category)) return false
-      if (searchCenter) {
-        if (haversineMiles(searchCenter, incident) > radiusMiles) return false
-      }
+      if (searchCenter && haversineMiles(searchCenter, incident) > radiusMiles) return false
       return true
     })
   }, [incidents, activeCategories, searchCenter, radiusMiles])
@@ -242,7 +252,13 @@ function App() {
                   <strong>{searchCenter.label}</strong>
                 </span>
               </div>
-              <button className="clear-btn" onClick={() => setSearchCenter(null)}>✕ Clear</button>
+              <button
+                className="clear-btn"
+                onClick={handleClearSearch}
+                aria-label="Clear location filter"
+              >
+                ✕ Clear
+              </button>
             </div>
           )}
           <IncidentList
@@ -251,6 +267,7 @@ function App() {
             onSelect={setSelectedId}
             loading={loading}
             error={error}
+            openCount={openCount}
           />
         </aside>
 
