@@ -51,6 +51,10 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
   const onSelectRef = useRef(onSelect)
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
 
+  // Keep center in a ref so init callbacks can read the current value without stale closures
+  const centerRef = useRef(center)
+  useEffect(() => { centerRef.current = center }, [center])
+
   const [loadError, setLoadError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
@@ -100,6 +104,13 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
         })
 
         infoWindow.current = new google.maps.InfoWindow()
+
+        // Pan to center immediately if one was already set when the map loaded
+        if (centerRef.current) {
+          mapInstance.current.panTo(centerRef.current)
+          mapInstance.current.setZoom(14)
+        }
+
         if (!cancelled) setReady(true)
       })
       .catch((err: unknown) => {
@@ -122,11 +133,12 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     }
   }, [apiKey])
 
+  // Pan whenever the center prop changes (user searches an address)
   useEffect(() => {
     if (!mapInstance.current || !center) return
     mapInstance.current.panTo(center)
     mapInstance.current.setZoom(14)
-  }, [center, ready])  // also fire when map becomes ready with a pre-existing center
+  }, [center])
 
   useEffect(() => {
     if (!ready || !mapInstance.current) return
