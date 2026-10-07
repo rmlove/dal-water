@@ -14,14 +14,19 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
-const DEFAULT_END = new Date()
-const DEFAULT_START = new Date(DEFAULT_END.getTime() - 90 * DAY_MS)
+function daysAgo(n: number): string {
+  return formatDate(new Date(Date.now() - n * DAY_MS))
+}
 
-const SEARCH_RADIUS_MILES = 3
+function today(): string {
+  return formatDate(new Date())
+}
+
+export type RadiusMiles = 1 | 3 | 5
 
 function App() {
-  const [startDate, setStartDate] = useState(formatDate(DEFAULT_START))
-  const [endDate, setEndDate] = useState(formatDate(DEFAULT_END))
+  const [startDate, setStartDate] = useState(() => daysAgo(30))
+  const [endDate, setEndDate] = useState(() => today())
   const [incidents, setIncidents] = useState<WaterIncident[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +34,7 @@ function App() {
     new Set(ALL_CATEGORIES)
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [radiusMiles, setRadiusMiles] = useState<RadiusMiles>(3)
 
   const [apiKey, setApiKey] = useState(
     () => localStorage.getItem('googleMapsApiKey') || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -79,9 +85,12 @@ function App() {
     })
   }
 
+  const handleSelectAllCategories = () => setActiveCategories(new Set(ALL_CATEGORIES))
+  const handleClearCategories = () => setActiveCategories(new Set())
+
   const handleSearchAddress = async (address: string) => {
     if (!apiKey) {
-      setSearchError('Add a Google Maps API key below to enable address search.')
+      setSearchError('Add a Google Maps API key to enable address search.')
       return
     }
     setSearching(true)
@@ -100,18 +109,34 @@ function App() {
     return incidents.filter((incident) => {
       if (!activeCategories.has(incident.category)) return false
       if (searchCenter) {
-        const distance = haversineMiles(searchCenter, incident)
-        if (distance > SEARCH_RADIUS_MILES) return false
+        if (haversineMiles(searchCenter, incident) > radiusMiles) return false
       }
       return true
     })
-  }, [incidents, activeCategories, searchCenter])
+  }, [incidents, activeCategories, searchCenter, radiusMiles])
+
+  const openCount = useMemo(
+    () => filteredIncidents.filter((i) => !i.status.toLowerCase().includes('closed')).length,
+    [filteredIncidents]
+  )
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Dallas Water Watch</h1>
-        <p>Reported water issues from Dallas 311 — leaks, main breaks, waste, pressure, and quality.</p>
+        <div className="app-header-inner">
+          <div>
+            <h1>Dallas Water Watch</h1>
+            <p>Live 311 reports — main breaks, sewer problems, flooding, and water pollution across Dallas</p>
+          </div>
+          <div className="app-header-stats">
+            <span className="stat">
+              <strong>{filteredIncidents.length}</strong> incidents
+            </span>
+            <span className="stat open">
+              <strong>{openCount}</strong> open
+            </span>
+          </div>
+        </div>
       </header>
 
       <div className="app-layout">
@@ -122,16 +147,22 @@ function App() {
             onDateChange={handleDateChange}
             activeCategories={activeCategories}
             onToggleCategory={handleToggleCategory}
+            onSelectAll={handleSelectAllCategories}
+            onClearAll={handleClearCategories}
             onSearchAddress={handleSearchAddress}
             searching={searching}
             searchError={searchError}
             apiKey={apiKey}
             onApiKeyChange={setApiKey}
+            radiusMiles={radiusMiles}
+            onRadiusChange={setRadiusMiles}
           />
           {searchCenter && (
             <div className="search-result">
-              Showing incidents within {SEARCH_RADIUS_MILES} miles of <strong>{searchCenter.label}</strong>
-              <button onClick={() => setSearchCenter(null)}>Clear</button>
+              <div>
+                Within <strong>{radiusMiles} mi</strong> of <strong>{searchCenter.label}</strong>
+              </div>
+              <button onClick={() => setSearchCenter(null)}>Clear search</button>
             </div>
           )}
           <IncidentList

@@ -11,23 +11,68 @@ interface IncidentListProps {
 }
 
 function statusClass(status: string): string {
-  const normalized = status.toLowerCase()
-  if (normalized.includes('closed') || normalized.includes('resolved')) return 'status-closed'
-  if (normalized.includes('progress') || normalized.includes('open')) return 'status-open'
+  const s = status.toLowerCase()
+  if (s.includes('closed') || s.includes('resolved') || s.includes('complete')) return 'status-closed'
+  if (s.includes('progress') || s.includes('open') || s.includes('pending')) return 'status-open'
   return 'status-other'
 }
 
+function relativeDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return dateStr
+  const days = Math.floor((Date.now() - date.getTime()) / (24 * 60 * 60 * 1000))
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 30) return `${days}d ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
+  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+}
+
 export default function IncidentList({ incidents, selectedId, onSelect, loading, error }: IncidentListProps) {
-  if (loading) return <div className="incident-list-message">Loading incidents...</div>
-  if (error) return <div className="incident-list-message error">{error}</div>
-  if (incidents.length === 0) {
-    return <div className="incident-list-message">No water incidents found for this range and filters.</div>
+  if (loading) {
+    return (
+      <div className="incident-list skeleton-list">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="skeleton-item">
+            <div className="skeleton-dot" />
+            <div className="skeleton-lines">
+              <div className="skeleton-line wide" />
+              <div className="skeleton-line narrow" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
   }
+
+  if (error) {
+    return (
+      <div className="incident-list-message error">
+        <div className="error-title">Could not load incidents</div>
+        <div className="error-detail">{error}</div>
+      </div>
+    )
+  }
+
+  if (incidents.length === 0) {
+    return (
+      <div className="incident-list-message">
+        <div className="empty-icon">🔍</div>
+        <div>No incidents found for this date range and filters.</div>
+        <div className="empty-hint">Try expanding the date range or enabling more categories.</div>
+      </div>
+    )
+  }
+
+  const openCount = incidents.filter((i) => !i.status.toLowerCase().includes('closed')).length
 
   return (
     <div className="incident-list">
       <div className="incident-list-header">
-        {incidents.length} incident{incidents.length === 1 ? '' : 's'}
+        <span>{incidents.length} incidents</span>
+        {openCount > 0 && (
+          <span className="open-badge">{openCount} open</span>
+        )}
       </div>
       <ul>
         {incidents.map((incident) => (
@@ -42,7 +87,7 @@ export default function IncidentList({ incidents, selectedId, onSelect, loading,
               <div className="incident-address">{incident.address}</div>
               <div className="incident-meta">
                 <span className={`status-badge ${statusClass(incident.status)}`}>{incident.status}</span>
-                <span className="incident-date">{incident.createdDate.split('T')[0]}</span>
+                <span className="incident-date">{relativeDate(incident.createdDate)}</span>
               </div>
             </div>
           </li>
