@@ -100,14 +100,24 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
           useAdvanced.current = false
         }
 
-        // If tiles never load (billing not enabled etc.), fall back to MockMap
+        // If tiles never load (billing not enabled, key restricted, etc.), fall back to MockMap.
+        // tilesloaded fires even for blank/blocked tiles, so we verify actual tile <img> elements
+        // are present before clearing the timer.
+        let tilesVerified = false
+        const verifyTiles = () => {
+          // Google Maps renders tiles as <img> elements inside the map container div
+          return !!mapRef.current && mapRef.current.querySelectorAll('img[src]').length > 0
+        }
         const tileTimer = setTimeout(() => {
-          if (!cancelled) setLoadError('TILES_FAILED')
-        }, 8000)
+          if (!cancelled && !tilesVerified) setLoadError('TILES_FAILED')
+        }, 6000)
         mapInstance.current.addListener('tilesloaded', () => {
-          clearTimeout(tileTimer)
-          // tiles are rendering — clear any stale error
-          if (!cancelled) setLoadError(null)
+          if (verifyTiles()) {
+            tilesVerified = true
+            clearTimeout(tileTimer)
+            if (!cancelled) setLoadError(null)
+          }
+          // If no img[src] found, let the 6s timer fire and show MockMap
         })
 
         infoWindow.current = new google.maps.InfoWindow()
