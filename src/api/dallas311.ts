@@ -31,6 +31,7 @@ const CATEGORY_RULES: { category: IncidentCategory; match: RegExp }[] = [
   { category: 'Water / Sewer Construction', match: /construction|line\s*locate/i },
 ]
 
+/** Maps a raw 311 service_request_type string to one of the six incident categories. */
 export function categorize(type: string): IncidentCategory {
   for (const rule of CATEGORY_RULES) {
     if (rule.match.test(type)) return rule.category
@@ -150,6 +151,11 @@ export interface FetchOptions {
   limit?: number
 }
 
+/**
+ * Fetches water-related 311 service requests from the Dallas Open Data SODA API.
+ * Results are ordered newest-first and capped at `limit` records (default 2000).
+ * Throws if the API returns a non-2xx response.
+ */
 export async function fetchWaterIncidents({
   startDate,
   endDate,

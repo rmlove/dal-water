@@ -1,5 +1,6 @@
 const EARTH_RADIUS_MILES = 3958.8
 
+/** Returns the great-circle distance in miles between two lat/lng points. */
 export function haversineMiles(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number }

@@ -206,8 +206,14 @@ function App() {
       <header className="app-header">
         <div className="app-header-inner">
           <div className="app-title-group">
-            <h1>Dallas Water Watch</h1>
-            <p>Live 311 reports — main breaks, sewer problems, flooding &amp; water pollution across Dallas</p>
+            <svg className="app-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M16 3C16 3 7 13.5 7 19.5a9 9 0 0018 0C25 13.5 16 3 16 3z" fill="#38bdf8"/>
+              <path d="M16 12C16 12 10 18.5 10 21.5a6 6 0 0012 0C22 18.5 16 12 16 12z" fill="#0ea5e9" opacity="0.6"/>
+            </svg>
+            <div className="app-title-text">
+              <h1>Dallas Water Watch</h1>
+              <p>Live 311 reports — main breaks, sewer, flooding &amp; pollution across Dallas</p>
+            </div>
           </div>
           <div className="app-header-stats">
             <div className="stat">

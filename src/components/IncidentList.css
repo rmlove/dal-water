@@ -44,17 +44,19 @@
   gap: 0.6rem;
   padding: 0.6rem 0.85rem;
   border-bottom: 1px solid #f1f5f9;
+  border-left: 2px solid transparent;
   cursor: pointer;
-  transition: background 0.08s;
+  transition: background 0.08s, border-color 0.08s;
 }
 
 .incident-item:hover {
   background: #f8fafc;
+  border-left-color: #cbd5e1;
 }
 
 .incident-item.selected {
   background: #eff6ff;
-  border-left: 2px solid #2563eb;
+  border-left-color: #2563eb;
 }
 
 .category-dot {

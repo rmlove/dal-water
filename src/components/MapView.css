@@ -154,7 +154,7 @@
 /* ── Mock map ── */
 .mock-map {
   position: relative;
-  background: linear-gradient(160deg, #dbeafe 0%, #dcfce7 60%, #fef9c3 100%);
+  background: linear-gradient(160deg, #e0f2fe 0%, #d1fae5 55%, #fef3c7 100%);
   border-right: 1px solid #e2e8f0;
   overflow: hidden;
 }

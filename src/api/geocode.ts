@@ -33,6 +33,11 @@ async function geocodeViaNominatim(address: string): Promise<GeocodeResult> {
   }
 }
 
+/**
+ * Resolves a Dallas-area address string to lat/lng coordinates.
+ * Uses the Google Maps Geocoder when the Maps JS SDK is loaded; falls back to
+ * OpenStreetMap Nominatim so address search works without a Google API key.
+ */
 export async function geocodeAddress(address: string): Promise<GeocodeResult> {
   try {
     return await geocodeViaGoogle(address)
