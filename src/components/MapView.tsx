@@ -237,7 +237,13 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     } else {
       infoWindow.current.open({ map: mapInstance.current, anchor: marker as google.maps.Marker })
     }
-    mapInstance.current.setCenter({ lat: incident.lat, lng: incident.lng })
+    // Only pan if the marker is outside the current viewport so browsing incidents
+    // doesn't reset the map position on every selection
+    const bounds = mapInstance.current.getBounds()
+    const pos = new google.maps.LatLng(incident.lat, incident.lng)
+    if (!bounds || !bounds.contains(pos)) {
+      mapInstance.current.setCenter(pos)
+    }
   }, [selectedId, ready, incidentById])
 
   if (!apiKey) {
