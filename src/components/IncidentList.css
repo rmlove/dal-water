@@ -154,8 +154,21 @@
   font-size: 1.5rem;
 }
 
+.empty-title {
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.88rem;
+}
+
+.empty-detail {
+  font-size: 0.8rem;
+  color: #475569;
+  max-width: 260px;
+  line-height: 1.5;
+}
+
 .empty-hint {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #94a3b8;
 }
 

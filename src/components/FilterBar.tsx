@@ -65,12 +65,31 @@ export default function FilterBar({
   onRadiusChange,
 }: FilterBarProps) {
   const [addressInput, setAddressInput] = useState('')
+  const [inputError, setInputError] = useState<string | null>(null)
   // Local draft for API key — only commit on blur or Enter to avoid reloading on every keystroke
   const [keyDraft, setKeyDraft] = useState(apiKey)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (addressInput.trim()) onSearchAddress(addressInput.trim())
+    const val = addressInput.trim()
+    if (!val) {
+      setInputError('Enter an address or zip code.')
+      return
+    }
+    // Require at least a digit (street number or zip) or 5+ chars (named place/intersection)
+    const hasDigit = /\d/.test(val)
+    const looksLikePlace = val.replace(/\s+/g, '').length >= 5
+    if (!hasDigit && !looksLikePlace) {
+      setInputError('Include a street number or zip code for best results.')
+      return
+    }
+    setInputError(null)
+    onSearchAddress(val)
+  }
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddressInput(e.target.value)
+    if (inputError) setInputError(null)
   }
 
   const commitKey = () => {
@@ -95,8 +114,9 @@ export default function FilterBar({
             type="text"
             placeholder="Address or zip code…"
             value={addressInput}
-            onChange={(e) => setAddressInput(e.target.value)}
+            onChange={handleAddressChange}
             aria-label="Street address or zip code"
+            aria-invalid={!!inputError}
           />
           <button
             type="submit"
@@ -132,7 +152,8 @@ export default function FilterBar({
             ))}
           </div>
         </div>
-        {searchError && <div className="search-error" role="alert">{searchError}</div>}
+        {inputError && <div className="search-error" role="alert">{inputError}</div>}
+        {!inputError && searchError && <div className="search-error" role="alert">{searchError}</div>}
       </section>
 
       {/* Date range */}

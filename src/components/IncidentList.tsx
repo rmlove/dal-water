@@ -9,6 +9,8 @@ interface IncidentListProps {
   loading: boolean
   error: string | null
   openCount: number
+  searchCenter: { label: string } | null
+  radiusMiles: number
 }
 
 function statusClass(status: string): string {
@@ -30,7 +32,7 @@ function relativeDate(dateStr: string, now: number): string {
   return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
 }
 
-export default function IncidentList({ incidents, selectedId, onSelect, loading, error, openCount }: IncidentListProps) {
+export default function IncidentList({ incidents, selectedId, onSelect, loading, error, openCount, searchCenter, radiusMiles }: IncidentListProps) {
   if (loading) {
     return (
       <div className="incident-list skeleton-list">
@@ -57,6 +59,18 @@ export default function IncidentList({ incidents, selectedId, onSelect, loading,
   }
 
   if (incidents.length === 0) {
+    if (searchCenter) {
+      return (
+        <div className="incident-list-message">
+          <div className="empty-icon">📍</div>
+          <div className="empty-title">No incidents near this address</div>
+          <div className="empty-detail">
+            Nothing found within <strong>{radiusMiles} mi</strong> of <strong>{searchCenter.label}</strong> in this date range.
+          </div>
+          <div className="empty-hint">Try a wider radius or a longer date range.</div>
+        </div>
+      )
+    }
     return (
       <div className="incident-list-message">
         <div className="empty-icon">🔍</div>

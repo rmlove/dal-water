@@ -276,6 +276,8 @@ function App() {
             loading={loading}
             error={error}
             openCount={openCount}
+            searchCenter={searchCenter}
+            radiusMiles={radiusMiles}
           />
         </aside>
 
