@@ -63,14 +63,10 @@ function App() {
   const [incidents, setIncidents] = useState<WaterIncident[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeCategories, setActiveCategories] = useState<Set<IncidentCategory>>(() => {
-    if (INITIAL_HASH.cats) {
-      const saved = new Set(INITIAL_HASH.cats.split(',') as IncidentCategory[])
-      const valid = ALL_CATEGORIES.filter((c) => saved.has(c))
-      if (valid.length > 0) return new Set(valid)
-    }
-    return new Set(ALL_CATEGORIES)
-  })
+  // Always start with all categories selected — don't persist partial selections in the URL
+  const [activeCategories, setActiveCategories] = useState<Set<IncidentCategory>>(
+    () => new Set(ALL_CATEGORIES)
+  )
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [radiusMiles, setRadiusMiles] = useState<RadiusMiles>(() => {
     const r = Number(INITIAL_HASH.radius)
@@ -93,10 +89,12 @@ function App() {
   const syncHash = useRef(false)
   useEffect(() => {
     if (!syncHash.current) { syncHash.current = true; return }
+    // Omit cats from the hash — all categories is always the default, no need to encode it
+    const allSelected = activeCategories.size === ALL_CATEGORIES.length
     writeHash({
       start: startDate,
       end: endDate,
-      cats: [...activeCategories].join(','),
+      cats: allSelected ? undefined : [...activeCategories].join(','),
       lat: searchCenter ? String(searchCenter.lat) : undefined,
       lng: searchCenter ? String(searchCenter.lng) : undefined,
       label: searchCenter ? encodeURIComponent(searchCenter.label) : undefined,
@@ -289,6 +287,7 @@ function App() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             center={searchCenter}
+            radiusMiles={radiusMiles}
           />
         </main>
       </div>

@@ -8,12 +8,16 @@ import './MapView.css'
 const DALLAS_CENTER = { lat: 32.7767, lng: -96.797 }
 
 
+// Zoom levels that fit the search radius ring comfortably in the viewport
+const RADIUS_ZOOM: Record<number, number> = { 1: 14, 3: 12, 5: 11 }
+
 interface MapViewProps {
   apiKey: string
   incidents: WaterIncident[]
   selectedId: string | null
   onSelect: (id: string | null) => void
   center: { lat: number; lng: number } | null
+  radiusMiles: number
 }
 
 function buildInfoContent(incident: WaterIncident): string {
@@ -48,7 +52,7 @@ function buildInfoContent(incident: WaterIncident): string {
 
 type AnyMarker = google.maps.marker.AdvancedMarkerElement | google.maps.Marker
 
-export default function MapView({ apiKey, incidents, selectedId, onSelect, center }: MapViewProps) {
+export default function MapView({ apiKey, incidents, selectedId, onSelect, center, radiusMiles }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<google.maps.Map | null>(null)
   const markers = useRef<Map<string, AnyMarker>>(new Map())
@@ -58,9 +62,11 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
   const onSelectRef = useRef(onSelect)
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
 
-  // Keep center in a ref so init callbacks can read the current value without stale closures
+  // Keep center and radiusMiles in refs so init callbacks can read current values without stale closures
   const centerRef = useRef(center)
   useEffect(() => { centerRef.current = center }, [center])
+  const radiusMilesRef = useRef(radiusMiles)
+  useEffect(() => { radiusMilesRef.current = radiusMiles }, [radiusMiles])
 
   const [loadError, setLoadError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
@@ -125,7 +131,7 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
         // Jump to center immediately if one was already set when the map loaded
         if (centerRef.current) {
           mapInstance.current.setCenter(centerRef.current)
-          mapInstance.current.setZoom(14)
+          mapInstance.current.setZoom(RADIUS_ZOOM[radiusMilesRef.current] ?? 12)
         }
 
         if (!cancelled) setReady(true)
@@ -150,12 +156,12 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
     }
   }, [apiKey])
 
-  // Re-center whenever the user searches a new address
+  // Re-center whenever the user searches a new address, using a zoom that fits the radius
   useEffect(() => {
     if (!mapInstance.current || !center) return
     mapInstance.current.setCenter(center)
-    mapInstance.current.setZoom(14)
-  }, [center])
+    mapInstance.current.setZoom(RADIUS_ZOOM[radiusMiles] ?? 12)
+  }, [center, radiusMiles])
 
   useEffect(() => {
     if (!ready || !mapInstance.current) return
@@ -247,11 +253,11 @@ export default function MapView({ apiKey, incidents, selectedId, onSelect, cente
   }, [selectedId, ready, incidentById])
 
   if (!apiKey) {
-    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} center={center} />
+    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} center={center} radiusMiles={radiusMiles} />
   }
 
   if (loadError === 'TILES_FAILED') {
-    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} center={center} tilesFailed />
+    return <MockMap incidents={incidents} selectedId={selectedId} onSelect={onSelect} center={center} radiusMiles={radiusMiles} tilesFailed />
   }
 
   if (loadError) {
