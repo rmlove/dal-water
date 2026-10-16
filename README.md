@@ -1,17 +1,19 @@
 # Dallas Water Watch
 
+**Live URL:** [dal-water.vercel.app](https://dal-water.vercel.app)
+
 A community tool for Dallas residents to track reported water issues in real time — main breaks, sewer problems, storm drainage complaints, water pollution, and construction activity — sourced live from the City of Dallas 311 Open Data API.
 
 Built for neighbors who want to know what's happening with the water infrastructure on their street, in their neighborhood, or across their council district.
 
-![Dallas Water Watch](https://img.shields.io/badge/data-Dallas%20311%20Open%20Data-blue) ![React](https://img.shields.io/badge/built%20with-React%20%2B%20TypeScript-61dafb) ![Vite](https://img.shields.io/badge/bundler-Vite-646cff)
+![Dallas Water Watch](https://img.shields.io/badge/data-Dallas%20311%20Open%20Data-blue) ![React](https://img.shields.io/badge/built%20with-React%20%2B%20TypeScript-61dafb) ![Deployed on Vercel](https://img.shields.io/badge/deployed%20on-Vercel-black)
 
 ---
 
 ## What it does
 
 - **Live 311 data** — pulls directly from the [Dallas Open Data 311 dataset](https://www.dallasopendata.com/City-Services/311-Service-Requests-October-1-2020-to-Present/d7e7-envw) (updated daily), filtered to Dallas Water Utilities service request types
-- **Interactive Google Map** — color-coded pins by incident category; click any pin for details including status, report date, close date, and council district
+- **Interactive Google Map** — color-coded pins by incident category; click any pin for a popup with incident type, address, status, reported date and time, council district, close date, and outcome
 - **Address search** — enter any Dallas address or zip code to center the map and filter to incidents within 1, 3, or 5 miles
 - **"Near me" button** — uses browser geolocation to instantly show incidents around your current location
 - **Date range filter** — quick presets (7 / 30 / 90 days) or custom start/end dates
@@ -67,7 +69,23 @@ VITE_GOOGLE_MAPS_API_KEY=your-key-here
 **Option B — In the browser sidebar**
 Paste the key into the "Google Maps API key" section at the bottom of the sidebar. It is stored only in your browser's `localStorage` — never sent anywhere else.
 
+**Option C — Vercel environment variable**
+In the [Vercel project settings → Environment Variables](https://vercel.com/rmloves-projects/dal-water/settings/environment-variables), add `VITE_GOOGLE_MAPS_API_KEY` targeting the Production environment, then redeploy.
+
 > **Note:** Address search uses Google's built-in geocoder when a Maps key is present, and automatically falls back to [OpenStreetMap Nominatim](https://nominatim.org) when it isn't — so address search works in both modes.
+
+---
+
+## Deployment
+
+The app is deployed on [Vercel](https://vercel.com) at **[dal-water.vercel.app](https://dal-water.vercel.app)**.
+
+Every push to `main` triggers an automatic production deployment via the GitHub integration.
+
+To deploy your own fork:
+1. Fork this repo
+2. Import it in [Vercel](https://vercel.com/new)
+3. Vercel will auto-detect Vite — no configuration needed beyond the optional `VITE_GOOGLE_MAPS_API_KEY` env var
 
 ---
 
@@ -95,6 +113,7 @@ To report a new issue yourself: [311.cityofdallas.org](https://311.cityofdallas.
 | Data | Dallas Open Data SODA API |
 | Styling | Plain CSS (no framework) |
 | State | React hooks + URL hash for shareability |
+| Hosting | Vercel (auto-deploy from `main`) |
 
 ---
 
@@ -111,7 +130,7 @@ npm run preview  # Preview the production build locally
 
 ## Contributing
 
-This is a community tool. If you see data issues, have ideas for new features (council district overlays, email alerts, historical trend charts), or want to help deploy it publicly — open an issue or PR.
+This is a community tool. If you see data issues, have ideas for new features (council district overlays, email alerts, historical trend charts), or want to help — open an issue or PR.
 
 ---
 
